@@ -1,8 +1,18 @@
 import { readable, writable } from 'svelte/store';
 import type { EnergyReading } from '$lib/types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
-const WS_BASE = API_BASE.replace(/^http/, 'ws');
+// Used for REST API calls. In production the app and API share the same origin
+// (same-origin routing via the Gateway), so the base URL is empty and relative
+// paths are used. In local development set VITE_API_BASE_URL=http://localhost:8080
+// in src/web/.env to reach the API on a different port.
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+
+// Derives the WebSocket base URL from the current page's origin at runtime so
+// it works in any environment without build-time configuration.
+function getWsUrl(path: string): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${path}`;
+}
 
 function createEnergyStream() {
   let socket: WebSocket | null = null;
@@ -12,7 +22,7 @@ function createEnergyStream() {
   const { subscribe, set } = writable<EnergyReading | null>(null);
 
   function connect() {
-    socket = new WebSocket(`${WS_BASE}/api/v1/stream`);
+    socket = new WebSocket(getWsUrl('/api/v1/stream'));
 
     socket.onmessage = (event) => {
       try {

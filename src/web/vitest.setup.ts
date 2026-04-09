@@ -1,4 +1,5 @@
-import { test, expect } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/svelte';
+import { afterEach } from 'vitest';
 
-// Vitest setup: extend matchers
-import '@testing-library/jest-dom';
+afterEach(() => cleanup());

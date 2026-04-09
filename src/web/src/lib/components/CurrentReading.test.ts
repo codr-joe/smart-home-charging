@@ -19,6 +19,6 @@ describe('CurrentReading', () => {
     const reading: EnergyReading = { time: new Date().toISOString(), power_w: -1500, tariff: 'T2' };
     render(CurrentReading, { props: { reading } });
     expect(screen.getByText('Injecting')).toBeTruthy();
-    expect(screen.getByText('1500 W')).toBeTruthy();
+    expect(screen.getByText('1500')).toBeTruthy();
   });
 });

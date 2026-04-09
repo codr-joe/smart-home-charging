@@ -1,0 +1,31 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ include "web.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "web.labels" . | nindent 4 }}
+spec:
+  gatewayClassName: {{ .Values.ingress.gatewayClassName }}
+  listeners:
+    - name: web
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: websecure
+      protocol: HTTPS
+      port: 443
+      hostname: {{ .Values.ingress.hostname | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ''
+            kind: Secret
+            name: {{ .Values.ingress.tls.secretName }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+{{- end }}

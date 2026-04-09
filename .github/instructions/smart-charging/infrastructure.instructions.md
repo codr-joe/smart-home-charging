@@ -21,6 +21,6 @@ To deploy our application to the Kubernetes cluster, we use Helm charts. Each co
 
 We use Harbor as our container registry. The registry is hosted at `harbor.hooyberghs.eu`. All images must be pushed to this registry before they can be deployed to the Kubernetes cluster. You can use the `smart-charging` project in Harbor to organize your images.
 
-## Github Actions Runner Controller (ARC)
+## Argo CD
 
-All our infrastructure is not reachable from public internet, therefore to allow Github Actions to deploy to our Kubernetes cluster or to push images to the Container Registry, we use the Github Actions Runner Controller (ARC). This allows us to run self-hosted runners in our Kubernetes cluster that can execute our deployment workflows. The ARC is configured to automatically scale the number of runners based on the workload, ensuring that we have enough capacity to handle our deployment needs while minimizing costs. You can use the runner called `smart-charging-runner` for your deployment workflows.
+To deploy our application to the Kubernetes cluster, we use Argo CD. Argo CD is a declarative, GitOps continuous delivery tool for Kubernetes. We have set up Argo CD to monitor the `argo-cd/` directory in our GitHub repository. When you make changes to the infrastructure, you should update the corresponding YAML files in the `argo-cd/` directory and ensure that Argo CD can successfully deploy the changes to the cluster.

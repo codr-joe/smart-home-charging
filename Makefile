@@ -1,7 +1,12 @@
-.PHONY: help dev-db dev-api dev-web mock-p1 test test-api test-web lint-api lint-web setup
+.PHONY: help dev-db dev-api dev-web mock-p1 test test-api test-web lint-api lint-web setup \
+        build build-api build-web push push-api push-web release test-build
 
-API_DIR  := src/api
-WEB_DIR  := src/web
+API_DIR    := src/api
+WEB_DIR    := src/web
+REGISTRY   := harbor.hooyberghs.eu/smart-charging
+TAG        ?= latest
+API_IMAGE  := $(REGISTRY)/api:$(TAG)
+WEB_IMAGE  := $(REGISTRY)/web:$(TAG)
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -60,3 +65,33 @@ lint-api: ## Lint and vet Go code
 
 lint-web: ## Lint and format-check the frontend
 	cd $(WEB_DIR) && npm run lint
+
+# ── Container Build & Push ────────────────────────────────────────────────────
+
+build: build-api build-web ## Build all container images
+
+build-api: ## Build the API container image
+	docker build -t $(API_IMAGE) $(API_DIR)
+
+build-web: ## Build the web container image
+	docker build -t $(WEB_IMAGE) $(WEB_DIR)
+
+push: push-api push-web ## Push all container images to Harbor
+
+push-api: ## Push the API container image to Harbor
+	docker push $(API_IMAGE)
+
+push-web: ## Push the web container image to Harbor
+	docker push $(WEB_IMAGE)
+
+release: ## Prompt for a version tag, build, tag as latest, and push all images
+	@read -p "Version tag (e.g. 1.0.1): " tag; \
+	if [ -z "$$tag" ]; then echo "Error: version tag is required"; exit 1; fi; \
+	$(MAKE) build TAG=$$tag; \
+	docker tag $(REGISTRY)/api:$$tag $(REGISTRY)/api:latest; \
+	docker tag $(REGISTRY)/web:$$tag $(REGISTRY)/web:latest; \
+	$(MAKE) push TAG=$$tag; \
+	$(MAKE) push TAG=latest
+
+test-build: ## Test the container build Makefile targets
+	bash tests/build_test.sh

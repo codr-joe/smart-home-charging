@@ -8,7 +8,7 @@ image:
 service:
   port: 8080
 
-p1MeterUrl: "http://192.168.1.100"
+p1MeterUrl: "http://192.168.30.6"
 
 # Reference to an existing Secret that must contain the key 'database-url'.
 # Create this secret manually before deploying:
@@ -16,6 +16,12 @@ p1MeterUrl: "http://192.168.1.100"
 #     --namespace smart-charging \
 #     --from-literal=database-url='postgres://...'
 existingSecret: api-secret
+
+ingress:
+  enabled: true
+  hostname: smart-charging.hooyberghs.eu
+  # Name of the Gateway resource created by the web chart (same namespace).
+  gatewayName: web
 
 resources:
   requests:
