@@ -1,0 +1,20 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/api
+
+# Test artifacts
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Environment
+.env
+
+# Build output
+/bin/
+/dist/

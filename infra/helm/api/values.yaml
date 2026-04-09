@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: harbor.hooyberghs.eu/smart-charging/api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+
+p1MeterUrl: "http://192.168.1.100"
+
+# Reference to an existing Secret that must contain the key 'database-url'.
+# Create this secret manually before deploying:
+#   kubectl create secret generic api-secret \
+#     --namespace smart-charging \
+#     --from-literal=database-url='postgres://...'
+existingSecret: api-secret
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 20

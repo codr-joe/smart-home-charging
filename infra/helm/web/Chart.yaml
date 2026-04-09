@@ -1,0 +1,6 @@
+apiVersion: v2
+name: web
+description: Smart Charging web dashboard (SvelteKit)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

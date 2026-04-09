@@ -1,0 +1,27 @@
+image:
+  repository: timescale/timescaledb
+  tag: latest-pg16
+  pullPolicy: IfNotPresent
+
+database:
+  name: smartcharging
+
+# Reference to an existing Secret that must contain keys 'username' and 'password'.
+# Create it once manually before deploying:
+#   kubectl create secret generic timescaledb-secret \
+#     --namespace smart-charging \
+#     --from-literal=username=smartcharging \
+#     --from-literal=password='<strong-password>'
+existingSecret: timescaledb-secret
+
+storage:
+  storageClassName: local-path
+  size: 20Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

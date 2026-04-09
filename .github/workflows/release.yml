@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-api:
+    name: Build & push API image
+    runs-on: smart-charging-runner
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.hooyberghs.eu
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: harbor.hooyberghs.eu/smart-charging/api
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: src/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache-api
+          cache-to: type=local,dest=/tmp/.buildx-cache-api,mode=max
+
+  build-web:
+    name: Build & push web image
+    runs-on: smart-charging-runner
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.hooyberghs.eu
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: harbor.hooyberghs.eu/smart-charging/web
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: src/web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache-web
+          cache-to: type=local,dest=/tmp/.buildx-cache-web,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: smart-charging-runner
+    needs: [build-api, build-web]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy database
+        run: |
+          helm upgrade --install timescaledb infra/helm/db \
+            --namespace smart-charging \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+      - name: Deploy API
+        run: |
+          helm upgrade --install api infra/helm/api \
+            --namespace smart-charging \
+            --set image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 3m
+
+      - name: Deploy web
+        run: |
+          helm upgrade --install web infra/helm/web \
+            --namespace smart-charging \
+            --set image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 3m

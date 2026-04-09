@@ -1,0 +1,27 @@
+replicaCount: 1
+
+image:
+  repository: harbor.hooyberghs.eu/smart-charging/web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3000
+
+# Internal cluster URL of the API service.
+apiBaseUrl: "http://api.smart-charging.svc.cluster.local:8080"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10

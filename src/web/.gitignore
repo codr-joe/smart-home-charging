@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+.svelte-kit/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editor
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo

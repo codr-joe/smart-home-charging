@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-solar: oklch(0.75 0.18 90);
+  --color-grid-import: oklch(0.60 0.20 25);
+  --color-grid-export: oklch(0.65 0.18 145);
+  --color-surface: oklch(0.98 0 0);
+  --color-surface-dark: oklch(0.13 0 0);
+}
