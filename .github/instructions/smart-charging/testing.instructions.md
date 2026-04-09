@@ -5,8 +5,6 @@ applyTo: 'src/**/*'
 
 # Testing Instructions
 
-When changes are made it is required to validate the application by running automated and repeatable tests.
+When changes are made it is required to validate the application by running automated and repeatable tests. You will never commit code that is not covered by tests, and all tests must pass before merging your code. This ensures that the application remains stable and that new changes do not introduce bugs or regressions.
 
-### CRUD
-
-When implementing CRUD operations, it is important to ensure that all operations are tested. This includes creating, reading, updating, and deleting records. Each operation should have its own test case to validate that it works as expected.
+You can read the documentation on how to run the tests in the [local development guide](/docs/local-development.md).
