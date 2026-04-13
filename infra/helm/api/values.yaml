@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: harbor.hooyberghs.eu/smart-charging/api
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8080
