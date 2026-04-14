@@ -10,7 +10,8 @@ export const load: PageServerLoad = async () => {
     const params = new URLSearchParams({
       from: from.toISOString(),
       to: now.toISOString(),
-      limit: '288',
+      bucket: '120',
+      limit: '720',
     });
 
     const res = await fetch(`${API_BASE}/api/v1/energy/history?${params}`);

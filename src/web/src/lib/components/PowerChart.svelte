@@ -8,7 +8,7 @@
     if (live) {
       const last = reversed[reversed.length - 1];
       if (!last || last.time !== live.time) {
-        return [...reversed, live].slice(-288);
+        return [...reversed, live].slice(-720);
       }
     }
     return reversed;
@@ -107,7 +107,19 @@
       }
     }
 
-    return { cx, cy, yTicks, xTicksWithLabel, path, zeroY, plotW, notificationDots };
+    const tariffLines: Array<{ x: number; tariff: string }> = [];
+    let prevTariff: string | undefined;
+    for (let i = 0; i < points.length; i++) {
+      const t = points[i].tariff;
+      if (t && t !== prevTariff) {
+        if (prevTariff !== undefined) {
+          tariffLines.push({ x: cx(xs[i]), tariff: t });
+        }
+        prevTariff = t;
+      }
+    }
+
+    return { cx, cy, yTicks, xTicksWithLabel, path, zeroY, plotW, notificationDots, tariffLines };
   });
 </script>
 
@@ -207,6 +219,26 @@
         class="fill-gray-500 dark:fill-gray-400"
         font-size="11"
       >Time</text>
+
+      <!-- Tariff transition lines -->
+      {#each chartData.tariffLines as tl}
+        <line
+          x1={tl.x}
+          y1={PAD.top}
+          x2={tl.x}
+          y2={HEIGHT - PAD.bottom}
+          class="stroke-amber-500 dark:stroke-amber-400"
+          stroke-width="1"
+          stroke-dasharray="3 3"
+        />
+        <text
+          x={tl.x + 3}
+          y={PAD.top + 10}
+          text-anchor="start"
+          class="fill-amber-600 dark:fill-amber-400"
+          font-size="9"
+        >{tl.tariff}</text>
+      {/each}
 
       <!-- Grid import line (positive power_w, above the zero line) -->
       <path

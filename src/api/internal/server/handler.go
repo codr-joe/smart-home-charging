@@ -28,12 +28,14 @@ func (h *handler) getCurrent(c *fiber.Ctx) error {
 }
 
 // getHistory returns readings within a time window.
-// Query params: from (RFC3339), to (RFC3339), limit (int, default 500, max 5000).
+// Query params: from (RFC3339), to (RFC3339), limit (int, default 720, max 5000),
+// bucket (int, seconds per bucket for downsampling, default 120).
 func (h *handler) getHistory(c *fiber.Ctx) error {
 	now := time.Now().UTC()
 	from := now.Add(-24 * time.Hour)
 	to := now
-	limit := 500
+	limit := 720
+	bucketSecs := 120
 
 	if v := c.Query("from"); v != "" {
 		parsed, err := time.Parse(time.RFC3339, v)
@@ -49,16 +51,19 @@ func (h *handler) getHistory(c *fiber.Ctx) error {
 		}
 		to = parsed
 	}
-	if v := c.QueryInt("limit", 500); v > 0 {
+	if v := c.QueryInt("limit", 720); v > 0 {
 		if v > 5000 {
 			v = 5000
 		}
 		limit = v
 	}
+	if v := c.QueryInt("bucket", 120); v > 0 {
+		bucketSecs = v
+	}
 	if from.After(to) {
 		return fiber.NewError(fiber.StatusBadRequest, "from must be before to")
 	}
-	readings, err := h.repo.History(c.Context(), from, to, limit)
+	readings, err := h.repo.BucketedHistory(c.Context(), from, to, bucketSecs, limit)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "could not fetch history")
 	}

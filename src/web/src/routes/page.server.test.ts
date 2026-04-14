@@ -38,7 +38,7 @@ describe('page server load', () => {
 		expect(result.history).toEqual([]);
 	});
 
-	it('requests the last 24 hours of data', async () => {
+	it('requests the last 24 hours of data with 2-minute buckets', async () => {
 		vi.mocked(fetch).mockResolvedValueOnce(
 			new Response(JSON.stringify([]), { status: 200 })
 		);
@@ -54,7 +54,8 @@ describe('page server load', () => {
 		const to = new Date(params.get('to')!).getTime();
 
 		expect(to - from).toBeCloseTo(24 * 60 * 60 * 1000, -3);
-		expect(params.get('limit')).toBe('288');
+		expect(params.get('bucket')).toBe('120');
+		expect(params.get('limit')).toBe('720');
 		expect(to).toBeGreaterThanOrEqual(before);
 		expect(to).toBeLessThanOrEqual(after + 100);
 	});

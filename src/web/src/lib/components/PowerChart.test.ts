@@ -86,4 +86,49 @@ describe('PowerChart', () => {
 		const dots = document.querySelectorAll('circle.fill-red-500');
 		expect(dots.length).toBe(2);
 	});
+
+	it('renders tariff transition lines when tariff changes in history', () => {
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: 500, tariff: 'T2' },
+			{ time: new Date(Date.now() - 3600000).toISOString(), power_w: 400, tariff: 'T1' }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const lines = Array.from(document.querySelectorAll('line')).filter(
+			(l) => l.getAttribute('stroke-dasharray') === '3 3'
+		);
+		expect(lines.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('renders tariff label text when tariff transition occurs', () => {
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: 500, tariff: 'T2' },
+			{ time: new Date(Date.now() - 3600000).toISOString(), power_w: 400, tariff: 'T1' }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		expect(screen.getByText('T2')).toBeTruthy();
+	});
+
+	it('renders no tariff lines when all readings share the same tariff', () => {
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: 500, tariff: 'T1' },
+			{ time: new Date(Date.now() - 3600000).toISOString(), power_w: 400, tariff: 'T1' }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const lines = Array.from(document.querySelectorAll('line')).filter(
+			(l) => l.getAttribute('stroke-dasharray') === '3 3'
+		);
+		expect(lines.length).toBe(0);
+	});
+
+	it('renders no tariff lines when readings have no tariff data', () => {
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: 500 },
+			{ time: new Date(Date.now() - 3600000).toISOString(), power_w: 400 }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const lines = Array.from(document.querySelectorAll('line')).filter(
+			(l) => l.getAttribute('stroke-dasharray') === '3 3'
+		);
+		expect(lines.length).toBe(0);
+	});
 });
