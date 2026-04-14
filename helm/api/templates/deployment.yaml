@@ -34,6 +34,20 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.existingSecret }}
                   key: database-url
+            {{- if .Values.pushoverSecret }}
+            - name: PUSHOVER_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.pushoverSecret }}
+                  key: pushover-api-token
+                  optional: true
+            - name: PUSHOVER_USER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.pushoverSecret }}
+                  key: pushover-user-key
+                  optional: true
+            {{- end }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           livenessProbe:

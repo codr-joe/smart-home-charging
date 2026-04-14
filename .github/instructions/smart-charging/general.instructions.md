@@ -29,8 +29,13 @@ The application must have the following folder structure:
 ```
 repo/
 ├── .github/ # GitHub workflows and actions
+├── argo-cd/ # Argo CD configuration for the application
+├── docs/ # Documentation for the application, deployment, and others
+├── helm/ # Helm charts to deploy the application
 ├── src/ # Source code for the application
-├── docs/ # Documentation for the application
+├── tests/ # All test files go here
+├── docker-compose.yml # Docker Compose file for local development and testing
+├── Makefile # Makefile for common tasks such as building, testing, and deploying the application
 ├── README.md # Project overview
 ```
 

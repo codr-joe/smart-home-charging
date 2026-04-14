@@ -27,31 +27,38 @@ type Saver interface {
 
 // Poller periodically fetches data from the HomeWizard P1 meter HTTP API,
 // persists it to the database, and broadcasts it to connected WebSocket clients.
+// When a Notifier is provided it sends Pushover alerts on significant excess-power changes.
 type Poller struct {
 	p1URL    string
 	repo     Saver
 	hub      Broadcaster
+	notifier Notifier
 	interval time.Duration
 	client   *http.Client
+	lastBand int // last excess-power band for which a rising notification was sent
 }
 
 // NewPoller creates a Poller using the default HTTP client.
-func NewPoller(p1URL string, repo Saver, hub Broadcaster, interval time.Duration) *Poller {
+// Pass nil for notifier to disable Pushover alerts.
+func NewPoller(p1URL string, repo Saver, hub Broadcaster, notifier Notifier, interval time.Duration) *Poller {
 	return &Poller{
 		p1URL:    p1URL,
 		repo:     repo,
 		hub:      hub,
+		notifier: notifier,
 		interval: interval,
 		client:   &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
 // NewPollerWithClient creates a Poller with a custom HTTP client (useful for testing).
-func NewPollerWithClient(p1URL string, repo Saver, hub Broadcaster, interval time.Duration, client *http.Client) *Poller {
+// Pass nil for notifier to disable Pushover alerts.
+func NewPollerWithClient(p1URL string, repo Saver, hub Broadcaster, notifier Notifier, interval time.Duration, client *http.Client) *Poller {
 	return &Poller{
 		p1URL:    p1URL,
 		repo:     repo,
 		hub:      hub,
+		notifier: notifier,
 		interval: interval,
 		client:   client,
 	}
@@ -104,5 +111,40 @@ func (p *Poller) PollOnce(ctx context.Context) error {
 		return fmt.Errorf("marshal reading: %w", err)
 	}
 	p.hub.Broadcast(msg)
+	if p.notifier != nil {
+		p.handleNotifications(ctx, reading.ExcessW())
+	}
 	return nil
+}
+
+// handleNotifications evaluates the current excess power against the last notified band
+// and sends Pushover alerts when significant thresholds are crossed.
+//
+// Rising alerts fire at 1 000 W and every 500 W increment above that.
+// A falling alert fires when excess drops below 500 W after previously being above 1 000 W.
+func (p *Poller) handleNotifications(ctx context.Context, excess float64) {
+	currentBand := excessBand(excess)
+
+	switch {
+	case currentBand > p.lastBand:
+		// Notify for every newly crossed 500 W band.
+		start := p.lastBand + 500
+		if start < 1000 {
+			start = 1000
+		}
+		for band := start; band <= currentBand; band += 500 {
+			msg := fmt.Sprintf("Excess solar power has reached %d W.", band)
+			if err := p.notifier.Notify(ctx, "Solar Charging Alert", msg); err != nil {
+				log.Printf("pushover notify error: %v", err)
+			}
+		}
+		p.lastBand = currentBand
+
+	case excess < 500 && p.lastBand > 0:
+		// Notify once when excess falls well below the charging threshold.
+		if err := p.notifier.Notify(ctx, "Solar Charging Alert", "Excess solar power has dropped below 500 W."); err != nil {
+			log.Printf("pushover notify error: %v", err)
+		}
+		p.lastBand = 0
+	}
 }

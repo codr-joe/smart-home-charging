@@ -99,6 +99,8 @@ make lint-web    # prettier + eslint
 | `DATABASE_URL` | `postgres://smartcharging:smartcharging@localhost:5432/smartcharging` | PostgreSQL connection string |
 | `P1_METER_URL` | `http://localhost:8090` | URL of the HomeWizard P1 meter (or mock) |
 | `LISTEN_ADDR` | `:8080` | Address the API server binds to |
+| `PUSHOVER_API_TOKEN` | *(empty)* | Pushover application API token. Leave empty to disable notifications. |
+| `PUSHOVER_USER_KEY` | *(empty)* | Pushover user/group key. Leave empty to disable notifications. |
 
 ### `src/web/.env`
 

@@ -17,6 +17,15 @@ p1MeterUrl: "http://192.168.30.6"
 #     --from-literal=database-url='postgres://...'
 existingSecret: api-secret
 
+# Reference to an existing Secret that must contain 'pushover-api-token' and
+# 'pushover-user-key'. When set, the API sends Pushover notifications when excess
+# solar power crosses significant thresholds. Leave empty to disable notifications.
+#   kubectl create secret generic pushover-secret \
+#     --namespace smart-charging \
+#     --from-literal=pushover-api-token='YOUR_TOKEN' \
+#     --from-literal=pushover-user-key='YOUR_USER_KEY'
+pushoverSecret: pushover-secret
+
 ingress:
   enabled: true
   hostname: smart-charging.hooyberghs.eu

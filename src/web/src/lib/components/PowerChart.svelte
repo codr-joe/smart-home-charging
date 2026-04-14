@@ -1,19 +1,18 @@
 <script lang="ts">
   import type { EnergyReading } from '$lib/types';
 
-  export let history: EnergyReading[] = [];
-  export let live: EnergyReading | null = null;
+  let { history = [], live = null }: { history: EnergyReading[]; live: EnergyReading | null } = $props();
 
-  let points: EnergyReading[] = [];
-  $: {
-    points = [...history].reverse();
+  const points = $derived.by(() => {
+    const reversed = [...history].reverse();
     if (live) {
-      const last = points[points.length - 1];
+      const last = reversed[reversed.length - 1];
       if (!last || last.time !== live.time) {
-        points = [...points, live].slice(-288);
+        return [...reversed, live].slice(-288);
       }
     }
-  }
+    return reversed;
+  });
 
   const WIDTH = 800;
   const HEIGHT = 220;
@@ -27,8 +26,12 @@
     return nice * mag;
   }
 
-  function formatTime(ts: number): string {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  function formatTime(ts: number, showDate: boolean): string {
+    const d = new Date(ts);
+    if (showDate) {
+      return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   function formatWatts(w: number): string {
@@ -36,7 +39,12 @@
     return `${w} W`;
   }
 
-  $: chartData = (() => {
+  function excessBand(excess: number): number {
+    if (excess < 1000) return 0;
+    return Math.floor(excess / 500) * 500;
+  }
+
+  const chartData = $derived.by(() => {
     if (points.length === 0) return null;
     const xs = points.map((r) => new Date(r.time).getTime());
     const ys = points.map((r) => r.power_w);
@@ -62,8 +70,18 @@
       yTicks.push(Math.round(v));
     }
 
-    const xTicks = Array.from({ length: 7 }, (_, i) => minX + (i / 6) * rangeX);
+    const FOUR_HOURS = 4 * 60 * 60 * 1000;
+    const tickStart = Math.ceil(minX / FOUR_HOURS) * FOUR_HOURS;
+    const xTicks: number[] = [];
+    for (let t = tickStart; t <= maxX; t += FOUR_HOURS) {
+      xTicks.push(t);
+    }
 
+    const todayDate = new Date(maxX).toDateString();
+    const xTicksWithLabel = xTicks.map((t) => ({
+      ts: t,
+      showDate: new Date(t).toDateString() !== todayDate,
+    }));
     const path = points
       .map((r, i) => {
         const x = cx(xs[i]);
@@ -72,8 +90,25 @@
       })
       .join(' ');
 
-    return { cx, cy, yTicks, xTicks, path, zeroY: cy(0) };
-  })();
+    const zeroY = cy(0);
+
+    let lastBand = 0;
+    const notificationDots: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < points.length; i++) {
+      const r = points[i];
+      const excess = r.power_w < 0 ? -r.power_w : 0;
+      const band = excessBand(excess);
+      if (band > lastBand) {
+        notificationDots.push({ x: cx(xs[i]), y: cy(r.power_w) });
+        lastBand = band;
+      } else if (excess < 500 && lastBand > 0) {
+        notificationDots.push({ x: cx(xs[i]), y: cy(r.power_w) });
+        lastBand = 0;
+      }
+    }
+
+    return { cx, cy, yTicks, xTicksWithLabel, path, zeroY, plotW, notificationDots };
+  });
 </script>
 
 <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -86,6 +121,24 @@
       role="img"
       aria-label="Power usage over the last 24 hours"
     >
+      <defs>
+        <clipPath id="clip-grid-import">
+          <rect
+            x={PAD.left}
+            y={PAD.top}
+            width={chartData.plotW}
+            height={Math.max(0, chartData.zeroY - PAD.top)}
+          />
+        </clipPath>
+        <clipPath id="clip-solar-excess">
+          <rect
+            x={PAD.left}
+            y={chartData.zeroY}
+            width={chartData.plotW}
+            height={Math.max(0, HEIGHT - PAD.bottom - chartData.zeroY)}
+          />
+        </clipPath>
+      </defs>
       <!-- Y-axis grid lines and labels -->
       {#each chartData.yTicks as tick}
         <line
@@ -118,22 +171,22 @@
       />
 
       <!-- X-axis tick marks and time labels -->
-      {#each chartData.xTicks as tick}
+      {#each chartData.xTicksWithLabel as tick}
         <line
-          x1={chartData.cx(tick)}
+          x1={chartData.cx(tick.ts)}
           y1={HEIGHT - PAD.bottom}
-          x2={chartData.cx(tick)}
+          x2={chartData.cx(tick.ts)}
           y2={HEIGHT - PAD.bottom + 4}
           class="stroke-gray-300 dark:stroke-gray-600"
           stroke-width="1"
         />
         <text
-          x={chartData.cx(tick)}
+          x={chartData.cx(tick.ts)}
           y={HEIGHT - PAD.bottom + 16}
           text-anchor="middle"
           class="fill-gray-400 dark:fill-gray-500"
           font-size="11"
-        >{formatTime(tick)}</text>
+        >{formatTime(tick.ts, tick.showDate)}</text>
       {/each}
 
       <!-- Y-axis title -->
@@ -155,14 +208,30 @@
         font-size="11"
       >Time</text>
 
-      <!-- Data line -->
+      <!-- Grid import line (positive power_w, above the zero line) -->
       <path
         d={chartData.path}
         fill="none"
         class="stroke-blue-500"
         stroke-width="1.5"
         stroke-linejoin="round"
+        clip-path="url(#clip-grid-import)"
       />
+
+      <!-- Solar excess line (negative power_w, below the zero line) -->
+      <path
+        d={chartData.path}
+        fill="none"
+        class="stroke-green-500"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+        clip-path="url(#clip-solar-excess)"
+      />
+
+      <!-- Notification dots -->
+      {#each chartData.notificationDots as dot}
+        <circle cx={dot.x} cy={dot.y} r="4" class="fill-red-500" />
+      {/each}
     </svg>
   {/if}
 </div>

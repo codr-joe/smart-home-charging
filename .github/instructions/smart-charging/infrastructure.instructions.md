@@ -9,13 +9,17 @@ applyTo: '**/*'
 
 The application must be deployed on a bare metal Kubernetes cluster.
 
-### Ingress
+### Traefik
 
-For ingress, we must use Traefik with Kubernetes Gateway API. We must enforce HTTPS using Let's Encrypt certificates by making use of Cert-Manager ClusterIssuer called `letsencrypt-production`.
+Traefik is our chosen ingress controller utilizing the Kubernetes Gateway API. Each application component (backend, frontend, database) should have its own Gateway and corresponding HTTPRoute resources defined in the Helm chart under the `/helm` directory. When making changes to the infrastructure, you should update the corresponding YAML files in this directory and ensure that Traefik can successfully route traffic to the application components.
+
+### Cert-Manager
+
+We use Cert-Manager to manage our TLS certificates. We have set up a ClusterIssuer called `letsencrypt-production` that uses Let's Encrypt to issue certificates for our application. When making changes to the infrastructure, you should ensure that the necessary annotations are added to the Gateway resources to request certificates from Cert-Manager and that the certificates are issued successfully.
 
 ### Helm Charts
 
-To deploy our application to the Kubernetes cluster, we use Helm charts. Each component of the application (backend, frontend, database) has its own Helm chart located in the `infra/helm/` directory. When making changes to the infrastructure, you should update the corresponding Helm chart and ensure that it can be deployed successfully to the cluster.
+To deploy our application to the Kubernetes cluster, we use Helm charts. Each component of the application (backend, frontend, database) has its own Helm chart located in the `/helm` directory. When making changes to the infrastructure, you should update the corresponding Helm chart and ensure that it can be deployed successfully to the cluster.
 
 ## Container Registry
 

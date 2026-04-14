@@ -9,12 +9,13 @@ import (
 )
 
 type handler struct {
-	repo *energy.Repository
-	hub  *Hub
+	repo     *energy.Repository
+	hub      *Hub
+	notifier energy.Notifier
 }
 
-func newHandler(repo *energy.Repository, hub *Hub) *handler {
-	return &handler{repo: repo, hub: hub}
+func newHandler(repo *energy.Repository, hub *Hub, notifier energy.Notifier) *handler {
+	return &handler{repo: repo, hub: hub, notifier: notifier}
 }
 
 // getCurrent returns the most recent energy reading.
@@ -62,6 +63,18 @@ func (h *handler) getHistory(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "could not fetch history")
 	}
 	return c.JSON(readings)
+}
+
+// testNotification sends a "Hello World" push notification via Pushover.
+// Returns 503 when no notifier is configured.
+func (h *handler) testNotification(c *fiber.Ctx) error {
+	if h.notifier == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "notifications are not configured")
+	}
+	if err := h.notifier.Notify(c.Context(), "Smart Charging", "Hello World"); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to send notification")
+	}
+	return c.JSON(fiber.Map{"status": "ok"})
 }
 
 // stream upgrades the connection to WebSocket and fans out live readings.

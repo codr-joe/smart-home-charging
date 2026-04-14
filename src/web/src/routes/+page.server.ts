@@ -1,4 +1,4 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import type { EnergyReading } from '$lib/types';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:8080';
@@ -21,4 +21,21 @@ export const load: PageServerLoad = async () => {
   } catch {
     return { history: [] as EnergyReading[] };
   }
+};
+
+export const actions: Actions = {
+  testNotification: async ({ fetch: serverFetch }) => {
+    try {
+      const res = await serverFetch(`${API_BASE}/api/v1/notifications/test`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { success: false, error: body.message ?? 'Failed to send notification' };
+      }
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Could not reach the API' };
+    }
+  },
 };

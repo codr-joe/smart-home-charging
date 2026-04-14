@@ -38,10 +38,23 @@ func main() {
 		log.Fatal("P1_METER_URL environment variable is required")
 	}
 
-	poller := energy.NewPoller(p1URL, energyRepo, hub, 10*time.Second)
+	var notifier energy.Notifier
+	pushoverToken := os.Getenv("PUSHOVER_API_TOKEN")
+	pushoverUserKey := os.Getenv("PUSHOVER_USER_KEY")
+	if pushoverToken != "" && pushoverUserKey != "" {
+		notifier = energy.NewPushoverNotifier(energy.PushoverConfig{
+			APIToken: pushoverToken,
+			UserKey:  pushoverUserKey,
+		})
+		log.Println("pushover notifications enabled")
+	} else {
+		log.Println("pushover notifications disabled (PUSHOVER_API_TOKEN or PUSHOVER_USER_KEY not set)")
+	}
+
+	poller := energy.NewPoller(p1URL, energyRepo, hub, notifier, 10*time.Second)
 	go poller.Run(context.Background())
 
-	app := server.New(energyRepo, hub)
+	app := server.New(energyRepo, hub, notifier)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

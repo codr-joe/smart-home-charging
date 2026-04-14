@@ -41,4 +41,49 @@ describe('PowerChart', () => {
 		render(PowerChart, { props: { history, live } });
 		expect(document.querySelector('svg')).not.toBeNull();
 	});
+
+	it('renders two colored path segments for dual-color line', () => {
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 3600000).toISOString(), power_w: 500 },
+			{ time: new Date().toISOString(), power_w: 800 }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const paths = document.querySelectorAll('path');
+		const strokeClasses = Array.from(paths).map((p) => p.getAttribute('class') ?? '');
+		expect(strokeClasses.some((c) => c.includes('stroke-blue-500'))).toBe(true);
+		expect(strokeClasses.some((c) => c.includes('stroke-green-500'))).toBe(true);
+	});
+
+	it('renders notification dot when solar excess crosses 1000 W threshold', () => {
+		// History is newest-first (as returned by the API)
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: -1200 },
+			{ time: new Date(Date.now() - 120000).toISOString(), power_w: 200 }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const dots = document.querySelectorAll('circle.fill-red-500');
+		expect(dots.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('renders no notification dots when solar excess stays below 1000 W', () => {
+		// History is newest-first (as returned by the API)
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: -800 },
+			{ time: new Date(Date.now() - 120000).toISOString(), power_w: -500 }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const dots = document.querySelectorAll('circle.fill-red-500');
+		expect(dots.length).toBe(0);
+	});
+
+	it('renders a falling notification dot when excess drops below 500 W after being above 1000 W', () => {
+		// History is newest-first (as returned by the API)
+		const history: EnergyReading[] = [
+			{ time: new Date(Date.now() - 60000).toISOString(), power_w: 300 },
+			{ time: new Date(Date.now() - 180000).toISOString(), power_w: -1200 }
+		];
+		render(PowerChart, { props: { history, live: null } });
+		const dots = document.querySelectorAll('circle.fill-red-500');
+		expect(dots.length).toBe(2);
+	});
 });

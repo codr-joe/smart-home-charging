@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/codr-joe/smart-home-charging.git
     targetRevision: HEAD
-    path: infra/helm/web
+    path: helm/web
     helm:
       releaseName: web
   destination:

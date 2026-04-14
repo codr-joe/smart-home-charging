@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { EnergyReading } from '$lib/types';
 
-  export let reading: EnergyReading | null;
+  let { reading }: { reading: EnergyReading | null } = $props();
 
-  $: excessW = reading && reading.power_w < 0 ? -reading.power_w : 0;
-  $: isInjecting = reading ? reading.power_w < 0 : false;
-  $: formattedPower = reading ? Math.abs(reading.power_w).toFixed(0) : '—';
-  $: formattedExcess = excessW.toFixed(0);
-  $: updatedAt = reading ? new Date(reading.time).toLocaleTimeString() : null;
+  const excessW = $derived(reading && reading.power_w < 0 ? -reading.power_w : 0);
+  const isInjecting = $derived(reading ? reading.power_w < 0 : false);
+  const formattedPower = $derived(reading ? Math.abs(reading.power_w).toFixed(0) : '—');
+  const formattedExcess = $derived(excessW.toFixed(0));
+  const updatedAt = $derived(reading ? new Date(reading.time).toLocaleTimeString() : null);
 </script>
 
 <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
