@@ -11,10 +11,10 @@ import (
 type handler struct {
 	repo     *energy.Repository
 	hub      *Hub
-	notifier energy.Notifier
+	notifier *energy.TogglableNotifier
 }
 
-func newHandler(repo *energy.Repository, hub *Hub, notifier energy.Notifier) *handler {
+func newHandler(repo *energy.Repository, hub *Hub, notifier *energy.TogglableNotifier) *handler {
 	return &handler{repo: repo, hub: hub, notifier: notifier}
 }
 
@@ -71,15 +71,45 @@ func (h *handler) getHistory(c *fiber.Ctx) error {
 }
 
 // testNotification sends a "Hello World" push notification via Pushover.
-// Returns 503 when no notifier is configured.
+// Returns 503 when no notifier is configured or when notifications are disabled.
 func (h *handler) testNotification(c *fiber.Ctx) error {
 	if h.notifier == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "notifications are not configured")
+	}
+	if !h.notifier.IsEnabled() {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "notifications are disabled")
 	}
 	if err := h.notifier.Notify(c.Context(), "Smart Charging", "Hello World"); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to send notification")
 	}
 	return c.JSON(fiber.Map{"status": "ok"})
+}
+
+type notificationSettings struct {
+	Enabled bool `json:"enabled"`
+}
+
+// getNotificationSettings returns whether notifications are currently enabled.
+// Returns 503 when no notifier is configured.
+func (h *handler) getNotificationSettings(c *fiber.Ctx) error {
+	if h.notifier == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "notifications are not configured")
+	}
+	return c.JSON(notificationSettings{Enabled: h.notifier.IsEnabled()})
+}
+
+// updateNotificationSettings enables or disables notifications.
+// Returns 503 when no notifier is configured.
+func (h *handler) updateNotificationSettings(c *fiber.Ctx) error {
+	if h.notifier == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "notifications are not configured")
+	}
+	var body notificationSettings
+	if err := c.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+	h.notifier.SetEnabled(body.Enabled)
+	return c.JSON(notificationSettings{Enabled: h.notifier.IsEnabled()})
 }
 
 // stream upgrades the connection to WebSocket and fans out live readings.

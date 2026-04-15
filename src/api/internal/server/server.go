@@ -10,7 +10,7 @@ import (
 
 // New creates and configures the Fiber application.
 // Pass nil for notifier to disable push notifications.
-func New(repo *energy.Repository, hub *Hub, notifier energy.Notifier) *fiber.App {
+func New(repo *energy.Repository, hub *Hub, notifier *energy.TogglableNotifier) *fiber.App {
 	app := fiber.New(fiber.Config{AppName: "smart-charging-api"})
 	app.Use(recover.New())
 	app.Use(logger.New())
@@ -25,6 +25,8 @@ func New(repo *energy.Repository, hub *Hub, notifier energy.Notifier) *fiber.App
 	v1.Get("/energy/history", h.getHistory)
 	v1.Get("/stream", h.stream)
 	v1.Post("/notifications/test", h.testNotification)
+	v1.Get("/notifications/settings", h.getNotificationSettings)
+	v1.Put("/notifications/settings", h.updateNotificationSettings)
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})

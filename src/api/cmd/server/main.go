@@ -38,14 +38,15 @@ func main() {
 		log.Fatal("P1_METER_URL environment variable is required")
 	}
 
-	var notifier energy.Notifier
+	var notifier *energy.TogglableNotifier
 	pushoverToken := os.Getenv("PUSHOVER_API_TOKEN")
 	pushoverUserKey := os.Getenv("PUSHOVER_USER_KEY")
 	if pushoverToken != "" && pushoverUserKey != "" {
-		notifier = energy.NewPushoverNotifier(energy.PushoverConfig{
+		base := energy.NewPushoverNotifier(energy.PushoverConfig{
 			APIToken: pushoverToken,
 			UserKey:  pushoverUserKey,
 		})
+		notifier = energy.NewTogglableNotifier(base, true)
 		log.Println("pushover notifications enabled")
 	} else {
 		log.Println("pushover notifications disabled (PUSHOVER_API_TOKEN or PUSHOVER_USER_KEY not set)")

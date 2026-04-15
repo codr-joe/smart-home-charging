@@ -14,13 +14,21 @@ export const load: PageServerLoad = async () => {
       limit: '720',
     });
 
-    const res = await fetch(`${API_BASE}/api/v1/energy/history?${params}`);
-    if (!res.ok) return { history: [] as EnergyReading[] };
+    const [historyRes, settingsRes, currentRes] = await Promise.all([
+      fetch(`${API_BASE}/api/v1/energy/history?${params}`),
+      fetch(`${API_BASE}/api/v1/notifications/settings`),
+      fetch(`${API_BASE}/api/v1/energy/current`),
+    ]);
 
-    const history: EnergyReading[] = await res.json();
-    return { history };
+    const history: EnergyReading[] = historyRes.ok ? await historyRes.json() : [];
+    const notificationsEnabled: boolean = settingsRes.ok
+      ? (await settingsRes.json()).enabled
+      : null;
+    const currentReading: EnergyReading | null = currentRes.ok ? await currentRes.json() : null;
+
+    return { history, notificationsEnabled, currentReading };
   } catch {
-    return { history: [] as EnergyReading[] };
+    return { history: [] as EnergyReading[], notificationsEnabled: null, currentReading: null };
   }
 };
 
@@ -33,6 +41,25 @@ export const actions: Actions = {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         return { success: false, error: body.message ?? 'Failed to send notification' };
+      }
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Could not reach the API' };
+    }
+  },
+
+  toggleNotifications: async ({ fetch: serverFetch, request }) => {
+    const data = await request.formData();
+    const enabled = data.get('enabled') === 'true';
+    try {
+      const res = await serverFetch(`${API_BASE}/api/v1/notifications/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { success: false, error: body.message ?? 'Failed to update notification settings' };
       }
       return { success: true };
     } catch {

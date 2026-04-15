@@ -2,6 +2,7 @@ package energy_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -105,5 +106,85 @@ func TestPushoverNotifier_Notify_FormValues(t *testing.T) {
 		if gotForm.Get(key) == "" {
 			t.Errorf("form field %q is empty", key)
 		}
+	}
+}
+
+// stubNotifier is a minimal Notifier for TogglableNotifier tests.
+type stubNotifier struct {
+	calls int
+	err   error
+}
+
+func (s *stubNotifier) Notify(_ context.Context, _, _ string) error {
+	s.calls++
+	return s.err
+}
+
+func TestTogglableNotifier_EnabledDelegatesToBase(t *testing.T) {
+	base := &stubNotifier{}
+	n := energy.NewTogglableNotifier(base, true)
+
+	if err := n.Notify(context.Background(), "t", "m"); err != nil {
+		t.Fatalf("Notify() unexpected error: %v", err)
+	}
+	if base.calls != 1 {
+		t.Errorf("base.calls = %d, want 1", base.calls)
+	}
+}
+
+func TestTogglableNotifier_DisabledIsNoOp(t *testing.T) {
+	base := &stubNotifier{}
+	n := energy.NewTogglableNotifier(base, false)
+
+	if err := n.Notify(context.Background(), "t", "m"); err != nil {
+		t.Fatalf("Notify() unexpected error: %v", err)
+	}
+	if base.calls != 0 {
+		t.Errorf("base.calls = %d, want 0 (should be no-op when disabled)", base.calls)
+	}
+}
+
+func TestTogglableNotifier_IsEnabled(t *testing.T) {
+	n := energy.NewTogglableNotifier(&stubNotifier{}, true)
+	if !n.IsEnabled() {
+		t.Error("IsEnabled() = false, want true for initially-enabled notifier")
+	}
+
+	n2 := energy.NewTogglableNotifier(&stubNotifier{}, false)
+	if n2.IsEnabled() {
+		t.Error("IsEnabled() = true, want false for initially-disabled notifier")
+	}
+}
+
+func TestTogglableNotifier_SetEnabled(t *testing.T) {
+	base := &stubNotifier{}
+	n := energy.NewTogglableNotifier(base, true)
+
+	n.SetEnabled(false)
+	if n.IsEnabled() {
+		t.Error("IsEnabled() = true after SetEnabled(false), want false")
+	}
+	_ = n.Notify(context.Background(), "t", "m")
+	if base.calls != 0 {
+		t.Errorf("base.calls = %d, want 0 after disabling", base.calls)
+	}
+
+	n.SetEnabled(true)
+	if !n.IsEnabled() {
+		t.Error("IsEnabled() = false after SetEnabled(true), want true")
+	}
+	_ = n.Notify(context.Background(), "t", "m")
+	if base.calls != 1 {
+		t.Errorf("base.calls = %d, want 1 after re-enabling", base.calls)
+	}
+}
+
+func TestTogglableNotifier_PropagatesBaseError(t *testing.T) {
+	base := &stubNotifier{err: fmt.Errorf("pushover down")}
+	n := energy.NewTogglableNotifier(base, true)
+
+	err := n.Notify(context.Background(), "t", "m")
+	if err == nil {
+		t.Fatal("Notify() expected error from base, got nil")
 	}
 }

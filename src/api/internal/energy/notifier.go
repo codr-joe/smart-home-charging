@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -85,4 +86,36 @@ func excessBand(excess float64) int {
 		return 0
 	}
 	return int(excess/500) * 500
+}
+
+// TogglableNotifier wraps a Notifier and allows enabling/disabling notifications at runtime.
+// Notify is a no-op when disabled.
+type TogglableNotifier struct {
+	base    Notifier
+	enabled atomic.Bool
+}
+
+// NewTogglableNotifier creates a TogglableNotifier wrapping base with an initial enabled state.
+func NewTogglableNotifier(base Notifier, enabled bool) *TogglableNotifier {
+	n := &TogglableNotifier{base: base}
+	n.enabled.Store(enabled)
+	return n
+}
+
+// Notify sends a notification if enabled, and is a no-op otherwise.
+func (n *TogglableNotifier) Notify(ctx context.Context, title, message string) error {
+	if !n.enabled.Load() {
+		return nil
+	}
+	return n.base.Notify(ctx, title, message)
+}
+
+// SetEnabled enables or disables notifications at runtime.
+func (n *TogglableNotifier) SetEnabled(enabled bool) {
+	n.enabled.Store(enabled)
+}
+
+// IsEnabled reports whether notifications are currently enabled.
+func (n *TogglableNotifier) IsEnabled() bool {
+	return n.enabled.Load()
 }
